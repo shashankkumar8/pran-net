@@ -24,14 +24,17 @@
     <script>
       (function() {
         try {
-          var mode = localStorage.getItem('prannet_theme_mode') || 'system';
+          var params = new URLSearchParams(window.location.search);
+          var urlTheme = params.get('theme');
+          var mode = (urlTheme === 'dark' || urlTheme === 'light' || urlTheme === 'system') ? urlTheme : (localStorage.getItem('prannet_theme_mode') || 'system');
           var resolved = mode;
           if (mode === 'system') {
             resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           }
           document.documentElement.setAttribute('data-theme', resolved);
 
-          var lang = localStorage.getItem('prannet_lang') || 'en';
+          var urlLang = params.get('lang');
+          var lang = urlLang || localStorage.getItem('prannet_lang') || 'en';
           document.documentElement.setAttribute('lang', lang);
           if (lang === 'ur') {
             document.documentElement.setAttribute('dir', 'rtl');

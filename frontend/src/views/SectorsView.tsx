@@ -32,7 +32,14 @@ export default function SectorsView({
   telemetry,
   selectedLocation,
 }: SectorsViewProps) {
-  const [activeTab, setActiveTab] = useState<'municipal' | 'logistics' | 'campus' | 'agriculture'>('municipal');
+  const [activeTab, setActiveTab] = useState<'municipal' | 'logistics' | 'campus' | 'agriculture'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('tab');
+      if (t === 'municipal' || t === 'logistics' || t === 'campus' || t === 'agriculture') return t;
+    } catch {}
+    return 'municipal';
+  });
 
   // Municipal Incident Reporting Form States
   const [reportCategory, setReportCategory] = useState('road_dust');

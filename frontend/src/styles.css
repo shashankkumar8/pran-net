@@ -2001,4 +2001,103 @@ html[dir="rtl"] .footer-link:focus-visible {
   }
 }
 
+/* ============================================================== */
+/* VISUAL QA PASS: 5 CRITICAL RESPONSIVE & TYPOGRAPHY FIXES      */
+/* ============================================================== */
+
+/* Defect 1: Theme Switcher Mobile Text Truncation */
+@media (max-width: 640px) {
+  .theme-text {
+    display: none !important;
+  }
+  .theme-btn {
+    padding: 6px 8px !important;
+  }
+  .head-right {
+    gap: 6px !important;
+  }
+  .lang-select {
+    max-width: 130px;
+    font-size: 11px !important;
+  }
+}
+
+/* Defect 2: GIS Map Responsive Layout */
+.map-columns-layout {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .map-columns-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  #vayu-leaflet-map {
+    min-height: 340px !important;
+  }
+}
+
+/* Defect 3: Action Review Header & Badge Wrapping on Mobile */
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .panel-head h2, .panel-head h3 {
+    word-break: break-word;
+  }
+}
+
+/* Defect 4: Urdu RTL Section Heading Alignment & Breadcrumbs */
+html[dir="rtl"] {
+  text-align: right;
+}
+
+html[dir="rtl"] .section-header,
+html[dir="rtl"] .section-sub,
+html[dir="rtl"] .panel-head,
+html[dir="rtl"] .footnote,
+html[dir="rtl"] .hero-desc {
+  text-align: right !important;
+}
+
+html[dir="rtl"] .loc-controls-group,
+html[dir="rtl"] .hero-badge-strip {
+  flex-direction: row-reverse;
+}
+
+/* Defect 5: Navigation Horizontal Scroll Affordance */
+.nav-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 640px) {
+  .nav-strip {
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+  .nav-strip button {
+    scroll-snap-align: start;
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
 

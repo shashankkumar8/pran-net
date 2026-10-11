@@ -24,12 +24,31 @@ const INITIAL_LOCATION: LocationCoordinates = {
 };
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ViewId>('overview');
+  const [currentView, setCurrentView] = useState<ViewId>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view') as ViewId;
+      const validViews: ViewId[] = ['overview', 'vayu', 'whybad', 'downwind', 'sectors', 'review', 'ledger', 'sources', 'methodology'];
+      if (v && validViews.includes(v)) return v;
+    } catch {}
+    return 'overview';
+  });
+
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('theme') as ThemeMode;
+      if (t === 'dark' || t === 'light' || t === 'system') return t;
+    } catch {}
     return (localStorage.getItem('prannet_theme_mode') as ThemeMode) || 'system';
   });
 
   const [currentLang, setCurrentLang] = useState<LangCode>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const l = params.get('lang') as LangCode;
+      if (l) return l;
+    } catch {}
     return (localStorage.getItem('prannet_lang') as LangCode) || 'en';
   });
 

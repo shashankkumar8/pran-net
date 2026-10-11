@@ -68,7 +68,7 @@ export default function Header({
             title="Airglass Porcelain (Light Theme)"
             aria-pressed={themeMode === 'light'}
           >
-            <Sun size={13} /> {t(currentLang, 'theme_light')}
+            <Sun size={13} /> <span className="theme-text">{t(currentLang, 'theme_light')}</span>
           </button>
           <button
             type="button"
@@ -77,7 +77,7 @@ export default function Header({
             title="Obsidian Atmosphere (Dark Theme)"
             aria-pressed={themeMode === 'dark'}
           >
-            <Moon size={13} /> {t(currentLang, 'theme_dark')}
+            <Moon size={13} /> <span className="theme-text">{t(currentLang, 'theme_dark')}</span>
           </button>
           <button
             type="button"
@@ -86,7 +86,7 @@ export default function Header({
             title="System Preference"
             aria-pressed={themeMode === 'system'}
           >
-            <Monitor size={13} /> {t(currentLang, 'theme_system')}
+            <Monitor size={13} /> <span className="theme-text">{t(currentLang, 'theme_system')}</span>
           </button>
         </div>
 

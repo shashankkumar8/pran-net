@@ -196,7 +196,7 @@ export default function VayuMapView({ telemetry, stations }: VayuMapViewProps) {
       </div>
 
       {viewMode === 'map' ? (
-        <div className="columns" style={{ gridTemplateColumns: '1.25fr 0.75fr', gap: '20px' }}>
+        <div className="map-columns-layout">
           {/* Leaflet Map Panel */}
           <div className="panel" style={{ minHeight: '520px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
