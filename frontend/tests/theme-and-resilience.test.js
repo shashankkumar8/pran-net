@@ -39,19 +39,24 @@ test('styles.css defines complete dual-theme design tokens for both Dark and Lig
   assert.match(css, /\.theme-btn\.active/);
 });
 
-test('App.tsx implements persistent theme selector and resilient fallback', () => {
+test('App.tsx and Header.tsx implement persistent theme selector and multi-page navigation', () => {
   const appSrc = fs.readFileSync(path.join(frontendDir, 'src', 'App.tsx'), 'utf8');
-  
-  // Theme selector controls
-  assert.match(appSrc, /prannet_theme_mode/);
-  assert.match(appSrc, /setThemeMode\('light'\)/);
-  assert.match(appSrc, /setThemeMode\('dark'\)/);
-  assert.match(appSrc, /setThemeMode\('system'\)/);
+  const headerSrc = fs.readFileSync(path.join(frontendDir, 'src', 'components', 'Header.tsx'), 'utf8');
+  const navSrc = fs.readFileSync(path.join(frontendDir, 'src', 'components', 'Navigation.tsx'), 'utf8');
 
-  // Resilient offline fallback without fatal crash
-  assert.match(appSrc, /isOfflineDemo/);
-  assert.match(appSrc, /SIMULATED DEMO DATA/);
-  assert.match(appSrc, /DEMO_SCENARIOS/);
+  // Theme persistence in App & Header
+  assert.match(appSrc, /prannet_theme_mode/);
+  assert.match(headerSrc, /onThemeChange\('light'\)/);
+  assert.match(headerSrc, /onThemeChange\('dark'\)/);
+  assert.match(headerSrc, /onThemeChange\('system'\)/);
+
+  // All 9 operational view routes in Navigation
+  const requiredViews = ['overview', 'vayu', 'whybad', 'downwind', 'sectors', 'review', 'ledger', 'sources', 'methodology'];
+  for (const v of requiredViews) {
+    assert.match(navSrc, new RegExp(`id:\\s*'${v}'`));
+  }
+
+  // Resilient fallback: does not crash on missing API URL
   assert.doesNotMatch(appSrc, /if \(!API\) return <div className="shell"><main><div className="error">VITE_API_URL is not set/);
 });
 

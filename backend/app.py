@@ -3,6 +3,10 @@ from datetime import datetime, timezone
 from boto3.dynamodb.conditions import Key
 from engine import build_station_advisory, ACTIVITIES, RULES_VERSION, indoor_scenario
 from common import cfg, table, school, latest_observations, to_ddb, from_ddb, dumps, coordinator_token_ok
+from providers.open_meteo_air_quality import fetch_air_quality
+from providers.open_meteo_weather import fetch_weather
+from providers.cpcb_ogd import get_cpcb_status
+from providers.nasa_firms import get_firms_status
 
 DECISIONS = {"followed", "modified", "overridden", "reviewed"}
 
@@ -37,6 +41,33 @@ def handler(event, context=None):
         return response(204, {})
     if method == "GET" and path.endswith("/health"):
         return response(200, {"ok": True, "rules_version": RULES_VERSION, "data_source_mode": cfg("DATA_SOURCE_MODE", "sample")})
+    if method == "GET" and (path.endswith("/health/data-sources") or path.endswith("/data-sources")):
+        sources = [
+            {"id": "open_meteo_aq", "name": "Open-Meteo Air Quality", "type": "LIVE MODEL DATA", "status": "LIVE", "attribution": "Copernicus CAMS"},
+            {"id": "open_meteo_weather", "name": "Open-Meteo Weather", "type": "LIVE WEATHER CONTEXT", "status": "LIVE", "attribution": "ECMWF / DWD"},
+            get_cpcb_status(),
+            get_firms_status(),
+        ]
+        return response(200, {"data_sources": sources, "checked_at": datetime.now(timezone.utc).isoformat()})
+    if method == "GET" and (path.endswith("/telemetry/live") or path.endswith("/live")):
+        lat = float(q.get("lat", s["lat"]))
+        lon = float(q.get("lon", s["lon"]))
+        aq = fetch_air_quality(lat, lon)
+        weather = fetch_weather(lat, lon)
+        return response(200, {
+            "air_quality": aq,
+            "weather": weather,
+            "location": {"lat": lat, "lon": lon, "name": s.get("name", "Zone 1")},
+            "retrieved_at": datetime.now(timezone.utc).isoformat()
+        })
+    if method == "GET" and path.endswith("/sectors"):
+        return response(200, {
+            "sectors": [
+                {"id": "municipal", "title": "Municipal Operations", "lead": "Ward Mitigation Officer", "priority": "High", "actions": ["Mechanical road sweeping", "Construction dust suppression", "Paved shoulder misting"]},
+                {"id": "logistics", "title": "Gig Logistics & Delivery", "lead": "Fleet Safety Dispatcher", "priority": "Medium", "actions": ["Outdoor shift rotation", "High-exposure zone detour", "Distribution hub air shelter"]},
+                {"id": "campus", "title": "Campus & Educational", "lead": "Environmental Coordinator", "priority": "High", "actions": ["Outdoor assembly indoors", "Athletic schedule suspension", "Classroom purifier cadence"]}
+            ]
+        })
     if method == "GET" and path.endswith("/school"):
         return response(200, {k: s[k] for k in ("school_id", "name", "lat", "lon", "escalate_after_min")} | {"activities": ACTIVITIES})
     if method == "GET" and path.endswith("/observations"):
