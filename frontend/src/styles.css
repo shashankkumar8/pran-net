@@ -956,6 +956,63 @@ blockquote {
   letter-spacing: -0.02em;
 }
 
+/* Navigation Bar Styling */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 4px 2px 14px 2px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-bar button:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.nav-bar button.selected {
+  background: var(--accent-cyan-surface);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan-surface);
+}
+
+.nav-bar button .count {
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
 /* Footer */
 footer {
   display: flex;
@@ -969,8 +1026,19 @@ footer {
   margin-top: 32px;
 }
 
+footer div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 footer b {
   color: var(--text-secondary);
+}
+
+footer small {
+  color: var(--text-muted);
+  font-size: 10px;
 }
 
 /* Error Alert */
@@ -999,6 +1067,17 @@ footer b {
 
 /* Responsive */
 @media (max-width: 860px) {
+  header {
+    height: auto;
+    min-height: 64px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .head-right {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
   .hero {
     align-items: flex-start;
     flex-direction: column;
@@ -1025,13 +1104,32 @@ footer b {
 
 @media (max-width: 560px) {
   header {
-    padding: 0 14px;
+    padding: 8px 12px;
   }
   .brand b {
     font-size: 15px;
   }
+  .brand b span {
+    display: none;
+  }
   .brand small {
     display: none;
+  }
+  .head-right .live-badge,
+  .head-right .demo {
+    display: none;
+  }
+  .theme-btn span {
+    display: none;
+  }
+  main {
+    padding: 14px 12px 36px;
+  }
+  .hero-main-card {
+    padding: 16px;
+  }
+  .hero-big-number {
+    font-size: 46px;
   }
   .filters {
     grid-template-columns: 1fr;
@@ -1042,6 +1140,7 @@ footer b {
   footer {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
   }
 }
 
