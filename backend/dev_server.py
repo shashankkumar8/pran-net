@@ -92,7 +92,7 @@ class LambdaRequestHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "content-type,x-coordinator-token,idempotency-key")
+        self.send_header("Access-Control-Allow-Headers", "content-type,x-coordinator-token,idempotency-key,authorization")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
         self.end_headers()
 

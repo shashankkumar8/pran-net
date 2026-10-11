@@ -320,7 +320,10 @@ export default function App() {
   useEffect(() => {
     if (!API) return;
     fetch(`${API}/actions`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        'x-coordinator-token': token,
+        Authorization: `Bearer ${token}`,
+      },
     })
       .then((r) => r.json())
       .then((res) => {
@@ -353,6 +356,8 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-coordinator-token': token,
+          'idempotency-key': `act-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
@@ -360,7 +365,7 @@ export default function App() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || `Server returned ${res.status}`);
+        throw new Error(errJson.error || errJson.detail || `Server returned ${res.status}`);
       }
 
       const saved = await res.json();
@@ -369,7 +374,10 @@ export default function App() {
 
       // Refresh actions
       const listRes = await fetch(`${API}/actions`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          'x-coordinator-token': token,
+          Authorization: `Bearer ${token}`,
+        },
       }).then((r) => r.json());
       if (Array.isArray(listRes.items)) {
         setActions(listRes.items);

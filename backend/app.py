@@ -13,7 +13,7 @@ DECISIONS = {"followed", "modified", "overridden", "reviewed"}
 def response(status, data):
     return {"statusCode": status, "headers": {"content-type": "application/json",
             "access-control-allow-origin": cfg("ALLOWED_ORIGIN", "http://localhost:5173"),
-            "access-control-allow-headers": "content-type,x-coordinator-token,idempotency-key",
+            "access-control-allow-headers": "content-type,x-coordinator-token,idempotency-key,authorization",
             "access-control-allow-methods": "GET,POST,OPTIONS"}, "body": dumps(data)}
 
 def body_of(event):
@@ -92,7 +92,8 @@ def handler(event, context=None):
         except (TypeError, ValueError) as exc:
             return response(400, {"error": str(exc)})
     if path.endswith("/actions") or path.endswith("/metrics"):
-        if not coordinator_token_ok(hdr.get("x-coordinator-token", "")):
+        token_val = hdr.get("x-coordinator-token", "") or (hdr.get("authorization", "")[7:] if hdr.get("authorization", "").lower().startswith("bearer ") else hdr.get("authorization", ""))
+        if not coordinator_token_ok(token_val):
             return response(401, {"error": "Valid coordinator token required."})
         led, pk = table("LEDGER_TABLE"), f"SCHOOL#{s['school_id']}"
         if method == "GET" and path.endswith("/actions"):
