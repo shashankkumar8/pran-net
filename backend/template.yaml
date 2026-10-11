@@ -40,7 +40,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins: [!Ref AllowedOrigin]
-        AllowHeaders: [content-type, x-coordinator-token, idempotency-key]
+        AllowHeaders: [content-type, x-coordinator-token, idempotency-key, authorization]
         AllowMethods: [GET, POST, OPTIONS]
         MaxAge: 600
       DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
