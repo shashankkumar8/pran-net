@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SchoolAir Ledger - evidence-to-action air-quality decision support
+Parameters:
+  DataSourceMode: {Type: String, Default: sample, AllowedValues: [sample, live]}
+  AllowedOrigin: {Type: String, Default: 'http://localhost:5173'}
+  SchoolId: {Type: String, Default: demo-school}
+  SchoolName: {Type: String, Default: Demo school}
+  SchoolLat: {Type: String, Default: '28.6139'}
+  SchoolLon: {Type: String, Default: '77.2090'}
+  AlertEmail: {Type: String, Description: Receives unreviewed-severe-advisory emails (confirm the SNS subscription)}
+  CoordinatorTokenParameter: {Type: String, Default: /schoolair/coordinator-token}
+  DataGovKeyParameter: {Type: String, Default: /schoolair/datagov-key}
+  DataGovResourceId: {Type: String, Default: ''}
+  CityFilter: {Type: String, Default: Delhi}
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 20
+    MemorySize: 256
+    CodeUri: .
+    Environment:
+      Variables:
+        OBSERVATIONS_TABLE: !Ref ObservationsTable
+        LEDGER_TABLE: !Ref LedgerTable
+        DATA_SOURCE_MODE: !Ref DataSourceMode
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
+        SCHOOL_ID: !Ref SchoolId
+        SCHOOL_NAME: !Ref SchoolName
+        SCHOOL_LAT: !Ref SchoolLat
+        SCHOOL_LON: !Ref SchoolLon
+        COORDINATOR_TOKEN_PARAMETER: !Ref CoordinatorTokenParameter
+        DATA_GOV_KEY_PARAMETER: !Ref DataGovKeyParameter
+        DATA_GOV_RESOURCE_ID: !Ref DataGovResourceId
+        CITY_FILTER: !Ref CityFilter
+        ALERT_TOPIC_ARN: !Ref AlertTopic
+Resources:
+  SchoolAirApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: [!Ref AllowedOrigin]
+        AllowHeaders: [content-type, x-coordinator-token, idempotency-key]
+        AllowMethods: [GET, POST, OPTIONS]
+        MaxAge: 600
+      DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
+  ObservationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: station_id, AttributeType: S}, {AttributeName: observed_at, AttributeType: S}]
+      KeySchema: [{AttributeName: station_id, KeyType: HASH}, {AttributeName: observed_at, KeyType: RANGE}]
+      TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
+  LedgerTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      AttributeDefinitions: [{AttributeName: pk, AttributeType: S}, {AttributeName: sk, AttributeType: S}]
+      KeySchema: [{AttributeName: pk, KeyType: HASH}, {AttributeName: sk, KeyType: RANGE}]
+  AlertTopic:
+    Type: AWS::SNS::Topic
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: {TopicArn: !Ref AlertTopic, Protocol: email, Endpoint: !Ref AlertEmail}
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref ObservationsTable}
+        - Statement:   # append-only: no UpdateItem / DeleteItem
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query, dynamodb:TransactWriteItems], Resource: !GetAtt LedgerTable.Arn}
+            - {Effect: Allow, Action: [ssm:GetParameter], Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CoordinatorTokenParameter}'}
+      Events:
+        Any:
+          Type: HttpApi
+          Properties: {ApiId: !Ref SchoolAirApi, Path: '/{proxy+}', Method: ANY}
+  IngestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ingest.handler
+      Timeout: 60
+      Policies:
+        - Statement:
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:BatchWriteItem], Resource: !GetAtt ObservationsTable.Arn}
+            - {Effect: Allow, Action: [ssm:GetParameter], Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DataGovKeyParameter}'}
+      Events:
+        Hourly: {Type: Schedule, Properties: {Schedule: rate(1 hour)}}
+  EscalateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: escalate.handler
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref ObservationsTable}
+        - Statement:
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query, dynamodb:UpdateItem], Resource: !GetAtt LedgerTable.Arn}
+            - {Effect: Allow, Action: [sns:Publish], Resource: !Ref AlertTopic}
+      Events:
+        Every15: {Type: Schedule, Properties: {Schedule: rate(15 minutes)}}
+Outputs:
+  ApiUrl: {Value: !Sub 'https://${SchoolAirApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
+  ObservationsTableName: {Value: !Ref ObservationsTable}
+  LedgerTableName: {Value: !Ref LedgerTable}

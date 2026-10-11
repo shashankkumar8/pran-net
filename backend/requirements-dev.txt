@@ -1,0 +1,4 @@
+pytest
+moto[dynamodb,ssm,sns]
+boto3
+pyyaml
