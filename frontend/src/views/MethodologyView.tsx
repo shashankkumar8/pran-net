@@ -5,8 +5,8 @@ export default function MethodologyView() {
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>METHODOLOGY, STANDARDS & USER HELP</small>
-          <h2>Methodology & Scientific Reference</h2>
+          <small>STANDARDS & GUIDANCE</small>
+          <h2>Methods & Guidance</h2>
         </div>
         <label className="pill">Deterministic Rules v0.3.0</label>
       </div>

@@ -18,8 +18,8 @@ export default function DownWindView({ telemetry }: DownWindViewProps) {
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>DOWNWIND METEOROLOGICAL SCREENING</small>
-          <h2>Atmospheric Bearing & Upwind Context</h2>
+          <small>METEOROLOGICAL SCREENING</small>
+          <h2>Wind & Weather</h2>
         </div>
         <label className="pill">Directional Screen · Not Dispersion Simulation</label>
       </div>

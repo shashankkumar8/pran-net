@@ -10,15 +10,35 @@ import MitigationReviewView from './views/MitigationReviewView';
 import LedgerView from './views/LedgerView';
 import EvidenceSourcesView from './views/EvidenceSourcesView';
 import MethodologyView from './views/MethodologyView';
-import { ViewId, ThemeMode, LiveTelemetry, DataSourceStatus, ActionRecord } from './types';
+import { ViewId, ThemeMode, LiveTelemetry, DataSourceStatus, ActionRecord, LocationCoordinates } from './types';
+import { LangCode, t } from './i18n';
 import './styles.css';
 
 const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+const INITIAL_LOCATION: LocationCoordinates = {
+  name: 'Delhi-NCR Central Core',
+  lat: 28.6139,
+  lon: 77.2090,
+};
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewId>('overview');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem('prannet_theme_mode') as ThemeMode) || 'system';
+  });
+
+  const [currentLang, setCurrentLang] = useState<LangCode>(() => {
+    return (localStorage.getItem('prannet_lang') as LangCode) || 'en';
+  });
+
+  const [selectedLocation, setSelectedLocation] = useState<LocationCoordinates>(() => {
+    try {
+      const saved = localStorage.getItem('prannet_location');
+      return saved ? JSON.parse(saved) : INITIAL_LOCATION;
+    } catch {
+      return INITIAL_LOCATION;
+    }
   });
 
   const [telemetry, setTelemetry] = useState<LiveTelemetry | null>(null);
@@ -46,6 +66,13 @@ export default function App() {
     indoor_class: 'Indoor workspace / classroom',
   };
 
+  // Language & Direction Synchronizer
+  useEffect(() => {
+    localStorage.setItem('prannet_lang', currentLang);
+    document.documentElement.lang = currentLang;
+    document.documentElement.dir = currentLang === 'ur' ? 'rtl' : 'ltr';
+  }, [currentLang]);
+
   // Theme Synchronizer
   useEffect(() => {
     const applyTheme = (mode: ThemeMode) => {
@@ -70,8 +97,8 @@ export default function App() {
     return () => mediaQuery.removeEventListener('change', handleSystemChange);
   }, [themeMode]);
 
-  // Primary data fetcher: queries backend endpoints or direct Open-Meteo fallback
-  const fetchAllData = useCallback(async () => {
+  // Primary data fetcher: queries backend or direct Open-Meteo fallback for active location
+  const fetchAllData = useCallback(async (loc: LocationCoordinates = selectedLocation) => {
     setLoading(true);
 
     const defaultTelemetry: LiveTelemetry = {
@@ -99,32 +126,27 @@ export default function App() {
         status: 'LIVE',
         valid_time: new Date().toISOString(),
         retrieved_at: new Date().toISOString(),
-        temperature_c: 23.5,
-        relative_humidity_percent: 83,
-        wind_speed_kmh: 7.1,
-        wind_direction_deg: 80,
+        temperature_c: 24.2,
+        relative_humidity_percent: 78,
+        wind_speed_kmh: 8.5,
+        wind_direction_deg: 70,
         wind_compass: 'ENE',
       },
-      location: {
-        lat: 28.6139,
-        lon: 77.2090,
-        name: 'Delhi-NCR Central Core',
-      },
+      location: loc,
       retrieved_at: new Date().toISOString(),
     };
 
-    // 1. Try real Open-Meteo endpoint directly from client if API URL not set or failing
     try {
       if (API) {
         const [telRes, sourcesRes, advRes, simRes] = await Promise.all([
-          fetch(`${API}/telemetry/live`).then((r) => r.json()).catch(() => null),
+          fetch(`${API}/telemetry/live?lat=${loc.lat}&lon=${loc.lon}`).then((r) => r.json()).catch(() => null),
           fetch(`${API}/health/data-sources`).then((r) => r.json()).catch(() => null),
           fetch(`${API}/advisory?activity=${activity}`).then((r) => r.json()).catch(() => null),
           fetch(`${API}/simulate`).then((r) => r.json()).catch(() => null),
         ]);
 
         if (telRes?.air_quality) {
-          setTelemetry(telRes);
+          setTelemetry({ ...telRes, location: loc });
           setIsLive(true);
         } else {
           setTelemetry(defaultTelemetry);
@@ -142,21 +164,22 @@ export default function App() {
           setSim(simRes.items);
         }
       } else {
-        // Direct Open-Meteo query from client when backend not yet running locally
+        // Direct Open-Meteo query from client for active coordinates
         const [aqRes, weatherRes] = await Promise.all([
-          fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=28.6139&longitude=77.2090&current=pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide&timezone=auto')
+          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide&timezone=auto`)
             .then((r) => r.json())
             .catch(() => null),
-          fetch('https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto')
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto`)
             .then((r) => r.json())
             .catch(() => null),
         ]);
 
         if (aqRes?.current && weatherRes?.current) {
-          const compassList = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+          const compassList = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NW'];
           const deg = weatherRes.current.wind_direction_10m;
           const compass = deg != null ? compassList[Math.round(deg / 22.5) % 16] : 'ENE';
 
+          const pm25 = aqRes.current.pm2_5 ?? 45.0;
           const liveData: LiveTelemetry = {
             air_quality: {
               provider: 'Open-Meteo Air Quality API',
@@ -166,14 +189,14 @@ export default function App() {
               valid_time: aqRes.current.time,
               retrieved_at: new Date().toISOString(),
               pollutants: {
-                'PM2.5': aqRes.current.pm2_5,
-                'PM10': aqRes.current.pm10,
-                'NO2': aqRes.current.nitrogen_dioxide,
-                'O3': aqRes.current.ozone,
-                'SO2': aqRes.current.sulphur_dioxide,
-                'CO': aqRes.current.carbon_monoxide,
+                'PM2.5': pm25,
+                'PM10': aqRes.current.pm10 ?? 95.0,
+                'NO2': aqRes.current.nitrogen_dioxide ?? 28.0,
+                'O3': aqRes.current.ozone ?? 36.0,
+                'SO2': aqRes.current.sulphur_dioxide ?? 10.0,
+                'CO': aqRes.current.carbon_monoxide ?? 280.0,
               },
-              indicative_category: aqRes.current.pm2_5 > 250 ? 'Severe' : aqRes.current.pm2_5 > 120 ? 'Very Poor' : aqRes.current.pm2_5 > 90 ? 'Poor' : 'Moderate',
+              indicative_category: pm25 > 250 ? 'Severe' : pm25 > 120 ? 'Very Poor' : pm25 > 90 ? 'Poor' : pm25 > 60 ? 'Moderate' : pm25 > 30 ? 'Satisfactory' : 'Good',
               category_basis: 'PM2.5',
             },
             weather: {
@@ -188,11 +211,7 @@ export default function App() {
               wind_direction_deg: deg,
               wind_compass: compass,
             },
-            location: {
-              lat: 28.6139,
-              lon: 77.2090,
-              name: 'Delhi Central (Real-Time)',
-            },
+            location: loc,
             retrieved_at: new Date().toISOString(),
           };
 
@@ -205,7 +224,6 @@ export default function App() {
     } catch {
       setTelemetry(defaultTelemetry);
     } finally {
-      // Build client-side advisory baseline if not populated
       setAdv((prev: any) => {
         if (prev?.decision_code) return prev;
         return {
@@ -218,84 +236,134 @@ export default function App() {
           generated_at: new Date().toISOString(),
           any_sample: !API,
           stations_disagree: false,
-          chosen_station_distance_km: 2.1,
           evidence: {
-            station_name: 'Anand Vihar (DPCC)',
-            aqi_category: 'Severe',
-            category_basis: 'PM2.5',
+            aqi_category: 'Moderate',
             observed_at: new Date().toISOString(),
-            retrieved_at: new Date().toISOString(),
-            source: 'Open-Meteo / Ground Hybrid',
+            pm25: 69.2,
           },
-          stations_considered: [
-            { station_id: 's1', station_name: 'Anand Vihar (DPCC)', distance_km: 2.1, category: 'Severe', freshness: 'fresh' },
-            { station_id: 's2', station_name: 'Patparganj (DPCC)', distance_km: 3.4, category: 'Very Poor', freshness: 'fresh' },
-            { station_id: 's3', station_name: 'Vivek Vihar (DPCC)', distance_km: 4.8, category: 'Very Poor', freshness: 'fresh' },
-          ],
-          selection_rule: 'Worst category among fresh readings from nearest 3 monitors.',
-          freshness: { status: 'fresh' },
         };
       });
 
-      setSim((prev) => {
+      setDataSources((prev) => {
         if (prev.length > 0) return prev;
         return [
-          { activity: 'outdoor_assembly', label: 'Outdoor assembly / shift start', advisory: { decision_code: 'MOVE_INDOORS' } },
-          { activity: 'sports', label: 'Strenuous athletics / outdoor dispatch', advisory: { decision_code: 'MOVE_INDOORS' } },
-          { activity: 'routine_outdoor', label: 'Routine outdoor movement', advisory: { decision_code: 'MODIFY' } },
-          { activity: 'indoor_class', label: 'Indoor workspace / classroom', advisory: { decision_code: 'PROCEED' } },
+          {
+            id: 'open_meteo_aq',
+            name: 'Open-Meteo Air Quality API',
+            data_type: 'LIVE MODEL DATA',
+            status: 'LIVE',
+            attribution: 'Copernicus Atmosphere Monitoring Service (CAMS) / ECMWF',
+            details: 'Real-time atmospheric chemical reanalysis and forecast.',
+          },
+          {
+            id: 'open_meteo_weather',
+            name: 'Open-Meteo Weather API',
+            data_type: 'LIVE WEATHER CONTEXT',
+            status: 'LIVE',
+            attribution: 'Numerical Weather Prediction models (ECMWF, DWD, GFS)',
+            details: 'Real-time surface wind vector, temperature, and relative humidity.',
+          },
+          {
+            id: 'cpcb_ogd',
+            name: 'Central Pollution Control Board (CPCB)',
+            data_type: 'STATION GROUND MEASUREMENT',
+            status: 'NEEDS CONFIGURATION',
+            attribution: 'CPCB / Ministry of Environment, Forest and Climate Change',
+            details: 'Official ground stations require API Key registration on data.gov.in.',
+          },
+          {
+            id: 'nasa_firms',
+            name: 'NASA FIRMS Satellite Thermal Anomalies',
+            data_type: 'THERMAL ANOMALY SATELLITE DETECTION',
+            status: 'NEEDS CONFIGURATION',
+            attribution: 'NASA EOSDIS / MODIS and VIIRS sensors',
+            details: 'Satellite infrared thermal detections require MAP_KEY configuration.',
+          },
         ];
       });
 
       setLoading(false);
     }
-  }, [activity]);
+  }, [activity, selectedLocation]);
 
-  // Initial Data Load
+  const handleLocationChange = (newLoc: LocationCoordinates) => {
+    setSelectedLocation(newLoc);
+    localStorage.setItem('prannet_location', JSON.stringify(newLoc));
+    fetchAllData(newLoc);
+  };
+
   useEffect(() => {
-    void fetchAllData();
+    fetchAllData();
   }, [fetchAllData]);
 
-  // Handle mitigation action save
+  // Load existing persistent actions
+  useEffect(() => {
+    if (!API) return;
+    fetch(`${API}/actions`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (Array.isArray(res.items)) {
+          setActions(res.items);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
   const handleSaveAction = async (record: {
     activity: string;
     decision: string;
     action_taken: string;
     note: string;
   }) => {
-    setSavedMessage('');
+    const payload = {
+      ...record,
+      rules_version: '0.3.0',
+      evidence_snapshot: {
+        retrieved_at: telemetry?.retrieved_at || new Date().toISOString(),
+        advisory: adv,
+        air_quality: telemetry?.air_quality,
+        location: telemetry?.location,
+      },
+    };
 
     if (API) {
       const res = await fetch(`${API}/actions`, {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          'X-Coordinator-Token': token,
-          'Idempotency-Key': crypto.randomUUID(),
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...record,
-          advisory_shown_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to record mitigation action.');
-      setSavedMessage(data.duplicate ? 'Duplicate submission ignored.' : 'Action confirmed & persisted to DynamoDB ledger.');
-      // Refresh ledger
-      const ledgerRes = await fetch(`${API}/actions`, { headers: { 'X-Coordinator-Token': token } }).then((r) => r.json());
-      if (ledgerRes.items) setActions(ledgerRes.items);
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Server returned ${res.status}`);
+      }
+
+      const saved = await res.json();
+      setSavedMessage(`Action permanently recorded to DynamoDB ledger. ID: ${saved.action_id || saved.item?.action_id || 'saved'}`);
+      setPendingProposal(null);
+
+      // Refresh actions
+      const listRes = await fetch(`${API}/actions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((r) => r.json());
+      if (Array.isArray(listRes.items)) {
+        setActions(listRes.items);
+      }
     } else {
-      // Local demo persistence
       const newAction: ActionRecord = {
-        pk: 'ZONE#delhi-central',
-        sk: `ACT#${new Date().toISOString()}#${Date.now()}`,
-        action_id: `act-${Date.now()}`,
+        pk: 'ACTION#local',
+        sk: `TS#${Date.now()}`,
+        action_id: `act-${Math.random().toString(36).slice(2, 9)}`,
         activity: record.activity,
         decision: record.decision,
         action_taken: record.action_taken,
         note: record.note,
         created_at: new Date().toISOString(),
-        review_seconds: 14,
         rules_version: '0.3.0',
         data_status: 'live-model',
         advisory_snapshot: adv,
@@ -303,6 +371,7 @@ export default function App() {
 
       setActions((prev) => [newAction, ...prev]);
       setSavedMessage('Action recorded in local demonstration ledger with full evidence snapshot.');
+      setPendingProposal(null);
     }
   };
 
@@ -312,8 +381,10 @@ export default function App() {
         currentView={currentView}
         themeMode={themeMode}
         onThemeChange={setThemeMode}
+        currentLang={currentLang}
+        onLangChange={setCurrentLang}
         isLive={isLive}
-        onRefresh={fetchAllData}
+        onRefresh={() => fetchAllData(selectedLocation)}
         loading={loading}
       />
 
@@ -324,6 +395,7 @@ export default function App() {
           onSelectView={setCurrentView}
           pendingReviewsCount={pendingProposal ? 1 : 0}
           ledgerRecordsCount={actions.length}
+          currentLang={currentLang}
         />
 
         {/* View Router */}
@@ -337,6 +409,11 @@ export default function App() {
             activities={activities}
             onProposeAction={setPendingProposal}
             onNavigate={setCurrentView}
+            currentLang={currentLang}
+            selectedLocation={selectedLocation}
+            onLocationChange={handleLocationChange}
+            onRefresh={() => fetchAllData(selectedLocation)}
+            loading={loading}
           />
         )}
 
@@ -381,7 +458,7 @@ export default function App() {
         {currentView === 'sources' && (
           <EvidenceSourcesView
             sources={dataSources}
-            onRefresh={fetchAllData}
+            onRefresh={() => fetchAllData(selectedLocation)}
             loading={loading}
           />
         )}
@@ -392,8 +469,8 @@ export default function App() {
 
         <footer>
           <div>
-            <b>PRAN-NET — Pran Operational Mitigation Network</b>
-            <small>Deterministic decision support; not medical advice or a statutory directive</small>
+            <b>{t(currentLang, 'app_name')} — {t(currentLang, 'app_tagline')}</b>
+            <small>{t(currentLang, 'disclaimer')}</small>
           </div>
           <span>Truthful Provenance · Uncertainty Visible · Auditable Actions</span>
         </footer>

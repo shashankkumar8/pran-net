@@ -26,8 +26,8 @@ export default function WhyBadView({ telemetry }: WhyBadViewProps) {
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>WHY-BAD-AQI ROOT CAUSE INVESTIGATION</small>
-          <h2>Source Attribution & Aerosol Diagnostics</h2>
+          <small>EVIDENCE-BASED DIAGNOSTICS</small>
+          <h2>Pollution Source Analysis</h2>
         </div>
         <label className="pill">Descriptive Diagnostics · Not Statutory Proof</label>
       </div>

@@ -19,8 +19,8 @@ export default function SectorsView({ onProposeAction, onNavigate }: SectorsView
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>CROSS-SECTOR OPERATIONAL WORKSPACES</small>
-          <h2>Mitigation Workspaces by Sector</h2>
+          <small>OPERATIONAL WORKSPACES</small>
+          <h2>Sector Action Plans</h2>
         </div>
         <label className="pill">3 Sectors Active</label>
       </div>

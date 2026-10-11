@@ -24,7 +24,7 @@ export default function LedgerView({ actions, token }: LedgerViewProps) {
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
           <small>AUDITABLE ACTION HISTORY</small>
-          <h2>Persistent Mitigation Action Ledger</h2>
+          <h2>Action History</h2>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <label className="pill">{actions.length} Total Records</label>

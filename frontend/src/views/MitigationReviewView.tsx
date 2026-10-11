@@ -61,8 +61,8 @@ export default function MitigationReviewView({
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>HUMAN-IN-THE-LOOP MITIGATION WORKFLOW</small>
-          <h2>Mitigation Review & Authorization Queue</h2>
+          <small>HUMAN-IN-THE-LOOP WORKFLOW</small>
+          <h2>Action Review</h2>
         </div>
         <label className="pill">Audited Authorization</label>
       </div>

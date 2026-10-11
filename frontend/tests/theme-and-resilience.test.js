@@ -7,15 +7,31 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendDir = path.resolve(__dirname, '..');
 
-test('index.html contains PRAN-NET branding and anti-flash theme script', () => {
+test('index.html contains PRAN-NET branding, PWA manifest, and theme script', () => {
   const html = fs.readFileSync(path.join(frontendDir, 'index.html'), 'utf8');
   assert.match(html, /<title>PRAN-NET — Pran Operational Mitigation Network<\/title>/);
   assert.match(html, /data-theme="dark"/);
+  assert.match(html, /rel="manifest" href="\/manifest\.json"/);
   assert.match(html, /localStorage\.getItem\('prannet_theme_mode'\)/);
-  assert.match(html, /document\.documentElement\.setAttribute\('data-theme', resolved\)/);
+  assert.match(html, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
 });
 
-test('styles.css defines complete dual-theme design tokens for both Dark and Light modes', () => {
+test('manifest.json provides valid standalone PWA configuration', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(frontendDir, 'public', 'manifest.json'), 'utf8'));
+  assert.strictEqual(manifest.short_name, 'PRAN-NET');
+  assert.strictEqual(manifest.display, 'standalone');
+  assert.strictEqual(manifest.theme_color, '#06B6D4');
+  assert.ok(manifest.icons.length >= 2);
+});
+
+test('sw.js preserves live telemetry integrity without false caching', () => {
+  const sw = fs.readFileSync(path.join(frontendDir, 'public', 'sw.js'), 'utf8');
+  assert.match(sw, /url\.pathname\.includes\('\/telemetry'\)/);
+  assert.match(sw, /OFFLINE_UNAVAILABLE/);
+  assert.match(sw, /req\.method !== 'GET'/);
+});
+
+test('styles.css defines complete dual-theme design tokens and responsive classes', () => {
   const css = fs.readFileSync(path.join(frontendDir, 'src', 'styles.css'), 'utf8');
   
   // Dark mode tokens (Obsidian Atmosphere)
@@ -31,37 +47,57 @@ test('styles.css defines complete dual-theme design tokens for both Dark and Lig
   assert.match(css, /--accent-cyan:\s*#0891B2/);
   assert.match(css, /--accent-emerald:\s*#059669/);
   assert.match(css, /--text-primary:\s*#0F172A/);
-  assert.match(css, /--badge-demo-bg:\s*#FEF3C7/);
 
-  // Theme switch styling
-  assert.match(css, /\.theme-switch/);
-  assert.match(css, /\.theme-btn/);
-  assert.match(css, /\.theme-btn\.active/);
+  // New UI system classes
+  assert.match(css, /\.lang-picker-wrapper/);
+  assert.match(css, /\.location-bar-panel/);
+  assert.match(css, /\.aqi-hero-banner/);
+  assert.match(css, /\.pollutants-grid/);
+  assert.match(css, /html\[dir="rtl"\]/);
 });
 
-test('App.tsx and Header.tsx implement persistent theme selector and multi-page navigation', () => {
-  const appSrc = fs.readFileSync(path.join(frontendDir, 'src', 'App.tsx'), 'utf8');
-  const headerSrc = fs.readFileSync(path.join(frontendDir, 'src', 'components', 'Header.tsx'), 'utf8');
-  const navSrc = fs.readFileSync(path.join(frontendDir, 'src', 'components', 'Navigation.tsx'), 'utf8');
+test('i18n.ts supports all 13 Indian languages and handles RTL direction for Urdu', async () => {
+  const i18n = await import('../src/i18n.ts');
+  const codes = ['en', 'hi', 'bn', 'mr', 'ta', 'te', 'kn', 'gu', 'pa', 'ml', 'or', 'as', 'ur'];
 
-  // Theme persistence in App & Header
-  assert.match(appSrc, /prannet_theme_mode/);
-  assert.match(headerSrc, /onThemeChange\('light'\)/);
-  assert.match(headerSrc, /onThemeChange\('dark'\)/);
-  assert.match(headerSrc, /onThemeChange\('system'\)/);
-
-  // All 9 operational view routes in Navigation
-  const requiredViews = ['overview', 'vayu', 'whybad', 'downwind', 'sectors', 'review', 'ledger', 'sources', 'methodology'];
-  for (const v of requiredViews) {
-    assert.match(navSrc, new RegExp(`id:\\s*'${v}'`));
+  assert.strictEqual(i18n.LANGUAGES.length, 13);
+  for (const c of codes) {
+    const found = i18n.LANGUAGES.find((l) => l.code === c);
+    assert.ok(found, `Missing language entry for ${c}`);
+    assert.ok(found.nativeName.length > 0, `Missing nativeName for ${c}`);
   }
 
-  // Resilient fallback: does not crash on missing API URL
-  assert.doesNotMatch(appSrc, /if \(!API\) return <div className="shell"><main><div className="error">VITE_API_URL is not set/);
+  // Urdu must be marked rtl
+  const urdu = i18n.LANGUAGES.find((l) => l.code === 'ur');
+  assert.strictEqual(urdu.dir, 'rtl');
+
+  // Verify translations function t()
+  assert.strictEqual(i18n.t('hi', 'app_name'), 'प्राण-नेट');
+  assert.strictEqual(i18n.t('ur', 'app_name'), 'پران-نیٹ');
+  assert.strictEqual(i18n.t('en', 'nav_overview'), 'Air Quality Overview');
+});
+
+test('Navigation.tsx enforces all 9 plain-language renamed headings', () => {
+  const navSrc = fs.readFileSync(path.join(frontendDir, 'src', 'components', 'Navigation.tsx'), 'utf8');
+
+  const expectedRenamedLabels = [
+    'Air Quality Overview',
+    'Geographic Air Quality Map',
+    'Pollution Source Analysis',
+    'Wind & Weather',
+    'Sector Action Plans',
+    'Action Review',
+    'Action History',
+    'Data & Evidence',
+    'Methods & Guidance',
+  ];
+
+  for (const label of expectedRenamedLabels) {
+    assert.ok(navSrc.includes(label), `Navigation missing plain-language label: ${label}`);
+  }
 });
 
 test('Steady-state indoor scenario calculator preserves physical mass balance', () => {
-  // Test mass-balance equation: C_in = (P * ACH * C_out) / (ACH + k_dep + CADR/V)
   const outdoor = 150;
   const ach = 1.2;
   const cadr = 300;

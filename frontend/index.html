@@ -2,12 +2,25 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>PRAN-NET — Pran Operational Mitigation Network</title>
     <meta name="description" content="Evidence-to-action air intelligence, deterministic advisories, and persistent mitigation ledger." />
+    
+    <!-- PWA Meta & Manifest -->
+    <meta name="theme-color" content="#06B6D4" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PRAN-NET" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+
+    <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- Theme & Language Pre-flight script -->
     <script>
       (function() {
         try {
@@ -17,6 +30,12 @@
             resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           }
           document.documentElement.setAttribute('data-theme', resolved);
+
+          var lang = localStorage.getItem('prannet_lang') || 'en';
+          document.documentElement.setAttribute('lang', lang);
+          if (lang === 'ur') {
+            document.documentElement.setAttribute('dir', 'rtl');
+          }
         } catch (e) {}
       })();
     </script>
@@ -24,5 +43,18 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('PRAN-NET ServiceWorker registration successful with scope:', reg.scope);
+          }).catch(function(err) {
+            console.warn('PRAN-NET ServiceWorker registration failed:', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

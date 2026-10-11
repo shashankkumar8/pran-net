@@ -53,8 +53,8 @@ export default function EvidenceSourcesView({ sources, onRefresh, loading }: Evi
     <div className="view-container">
       <div className="panel-head" style={{ marginBottom: '14px' }}>
         <div>
-          <small>EVIDENCE & DATA SOURCES REGISTRY</small>
-          <h2>Provider Provenance & Health Registry</h2>
+          <small>EVIDENCE & DATA SOURCES</small>
+          <h2>Data & Evidence</h2>
         </div>
         <button className="secondary" onClick={onRefresh} disabled={loading} style={{ padding: '6px 12px', fontSize: '11px' }}>
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Check Status
