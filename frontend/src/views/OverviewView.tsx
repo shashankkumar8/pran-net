@@ -481,13 +481,15 @@ export default function OverviewView({
           <div className="panel-head">
             <div>
               <small>TEMPORAL PROFILE</small>
-              <h3>24-Hour PM2.5 Trajectory</h3>
+              <h3>24-Hour Diurnal Projection Profile</h3>
             </div>
-            <span className="pill">Diurnal Model</span>
+            <span className="pill" style={{ background: 'var(--badge-demo-bg)', color: 'var(--badge-demo-text)' }}>
+              Demonstration Diurnal Projection
+            </span>
           </div>
 
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-            Historical 18h model estimates and 6h predictive outlook for {selectedLocation.name}.
+            Normalized diurnal rush-hour projection curve anchored to current {selectedLocation.name} baseline PM2.5 ({pm25Val} µg/m³). Real hourly historical measurements require statutory CPCB station access.
           </p>
 
           <div className="trend-chart-container" style={{ height: '220px', display: 'flex', alignItems: 'flex-end', gap: '12px', paddingBottom: '24px', borderBottom: '1px solid var(--border-subtle)', position: 'relative' }}>

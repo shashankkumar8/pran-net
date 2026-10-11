@@ -437,6 +437,8 @@ export default function App() {
           <SectorsView
             onProposeAction={setPendingProposal}
             onNavigate={setCurrentView}
+            telemetry={telemetry}
+            selectedLocation={selectedLocation}
           />
         )}
 
@@ -449,6 +451,8 @@ export default function App() {
             onTokenChange={setToken}
             onNavigate={setCurrentView}
             savedMessage={savedMessage}
+            telemetry={telemetry}
+            selectedLocation={selectedLocation}
           />
         )}
 
