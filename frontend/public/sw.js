@@ -1,5 +1,5 @@
 // PRAN-NET Progressive Web App Service Worker
-const CACHE_NAME = 'pran-net-v1.0';
+const CACHE_NAME = 'pran-net-v2.0';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: cleanup obsolete caches
+// Activate: cleanup obsolete caches immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,7 +39,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Telemetry and live APIs: Network-first, do NOT cache as live if offline
+  // 2. Navigation / HTML Document requests: Network-first to always load fresh app updates
+  if (req.mode === 'navigate' || req.destination === 'document' || url.pathname === '/') {
+    event.respondWith(
+      fetch(req).then((response) => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return response;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 3. Telemetry and live APIs: Network-first, do NOT cache as live if offline
   if (
     url.pathname.includes('/telemetry') ||
     url.pathname.includes('/advisory') ||
@@ -48,7 +62,6 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       fetch(req).catch(() => {
-        // Return a JSON response marking data as unavailable/offline rather than stale fake live
         return new Response(
           JSON.stringify({
             status: 'OFFLINE_UNAVAILABLE',
@@ -65,14 +78,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Static assets & app shell: Cache-first, fall back to network
+  // 4. Static assets & bundles: Cache-first, fall back to network
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) {
         return cached;
       }
       return fetch(req).then((response) => {
-        // Cache successful local GET responses
         if (response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {

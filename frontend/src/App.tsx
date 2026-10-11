@@ -10,6 +10,7 @@ import MitigationReviewView from './views/MitigationReviewView';
 import LedgerView from './views/LedgerView';
 import EvidenceSourcesView from './views/EvidenceSourcesView';
 import MethodologyView from './views/MethodologyView';
+import Footer from './components/Footer';
 import { ViewId, ThemeMode, LiveTelemetry, DataSourceStatus, ActionRecord, LocationCoordinates } from './types';
 import { LangCode, t } from './i18n';
 import './styles.css';
@@ -467,13 +468,13 @@ export default function App() {
           <MethodologyView />
         )}
 
-        <footer>
-          <div>
-            <b>{t(currentLang, 'app_name')} — {t(currentLang, 'app_tagline')}</b>
-            <small>{t(currentLang, 'disclaimer')}</small>
-          </div>
-          <span>Truthful Provenance · Uncertainty Visible · Auditable Actions</span>
-        </footer>
+        <Footer
+          onNavigate={setCurrentView}
+          currentLang={currentLang}
+          dataSources={dataSources}
+          themeMode={themeMode}
+          onThemeChange={setThemeMode}
+        />
       </main>
     </div>
   );
