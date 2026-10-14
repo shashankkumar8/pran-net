@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SchoolAir Ledger - evidence-to-action air-quality decision support
 Parameters:
@@ -57,7 +57,7 @@ Resources:
     UpdateReplacePolicy: Retain
     Properties:
       BillingMode: PAY_PER_REQUEST
-      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: false}
       AttributeDefinitions: [{AttributeName: pk, AttributeType: S}, {AttributeName: sk, AttributeType: S}]
       KeySchema: [{AttributeName: pk, KeyType: HASH}, {AttributeName: sk, KeyType: RANGE}]
   AlertTopic:
@@ -88,7 +88,7 @@ Resources:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:BatchWriteItem], Resource: !GetAtt ObservationsTable.Arn}
             - {Effect: Allow, Action: [ssm:GetParameter], Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DataGovKeyParameter}'}
       Events:
-        Hourly: {Type: Schedule, Properties: {Schedule: rate(1 hour)}}
+        Hourly: {Type: Schedule, Properties: {Schedule: rate(1 hour), Enabled: false}}
   EscalateFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -99,8 +99,11 @@ Resources:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query, dynamodb:UpdateItem], Resource: !GetAtt LedgerTable.Arn}
             - {Effect: Allow, Action: [sns:Publish], Resource: !Ref AlertTopic}
       Events:
-        Every15: {Type: Schedule, Properties: {Schedule: rate(15 minutes)}}
+        Every15: {Type: Schedule, Properties: {Schedule: rate(15 minutes), Enabled: false}}
 Outputs:
   ApiUrl: {Value: !Sub 'https://${SchoolAirApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
   ObservationsTableName: {Value: !Ref ObservationsTable}
   LedgerTableName: {Value: !Ref LedgerTable}
+
+
+

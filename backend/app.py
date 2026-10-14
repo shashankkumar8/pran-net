@@ -1,4 +1,4 @@
-import json, time, uuid
+﻿import json, time, uuid
 from datetime import datetime, timezone
 from boto3.dynamodb.conditions import Key
 from engine import build_station_advisory, ACTIVITIES, RULES_VERSION, indoor_scenario
@@ -144,3 +144,5 @@ def handler(event, context=None):
                 return response(500, {"error": "Could not persist action."})
             return response(201, {"item": from_ddb(to_ddb(item)), "duplicate": False})
     return response(404, {"error": "Route not found."})
+
+
